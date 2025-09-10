@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HAI Demo App</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; display: flex; height:100vh; }
+    nav { width: 200px; background: #0b3d91; color: #fff; padding: 20px; box-sizing: border-box; }
+    nav h2 { font-size: 20px; margin-bottom: 16px; }
+    nav a { display: block; color: #dcedff; text-decoration: none; margin: 10px 0; font-weight:600; }
+    main { flex: 1; padding: 28px; overflow:auto; background: #f6f9fc; box-sizing: border-box; }
+    .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 6px 18px rgba(15,23,42,0.06); margin-bottom: 20px; }
+    #assistant { width: 340px; background: #ffffff; border-left: 1px solid #e6eef8; display: flex; flex-direction: column; box-sizing: border-box; }
+    #assistant h3 { margin: 12px 16px; color:#0b3d91; }
+    #chat { flex: 1; padding: 12px; overflow-y: auto; background: linear-gradient(180deg,#fbfdff,#f8fbff); }
+    #chat p { margin: 8px 0; padding:8px 12px; border-radius: 12px; background: #eef6ff; max-width:80%; }
+    #chat p.user { background: #e6fff4; text-align: right; margin-left:20%; }
+    #input { display: flex; border-top: 1px solid #eef4fb; padding:8px; }
+    #input input { flex: 1; border: none; padding: 10px; border-radius: 8px; background:#f4f8fb; margin-right:8px; }
+    #input button { border: none; background: #0b3d91; color: white; padding: 10px 14px; border-radius:8px; cursor:pointer; }
+    .small { font-size: 13px; color: #64748b; }
+    .metric { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-radius:10px; background:#f8fbff; margin-bottom:8px; }
+    .btn { background:#0b3d91; color:white; padding:10px 14px; border:none; border-radius:10px; cursor:pointer; }
+    input[type=text], input[type=email] { width:100%; padding:10px; border-radius:8px; border:1px solid #e6eef8; box-sizing:border-box; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { text-align:left; padding:8px; border-bottom:1px solid #f1f5f9; }
+    header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    header h1 { margin:0; color:#0b3d91; }
+  </style>
+</head>
+<body>
+  <nav>
+    <h2>HAI — Demo</h2>
+    <a href="#" onclick="showSection('capture')">Capture</a>
+    <a href="#" onclick="showSection('analyze')">Analyze</a>
+    <a href="#" onclick="showSection('enroll')">Enroll</a>
+    <a href="#" onclick="showSection('admin')">Admin</a>
+    <div style="margin-top:24px" class="small">Demo: local-only, no external APIs</div>
+  </nav>
+
+  <main>
+    <header>
+      <h1>Cosmetic Clinical Visual Analysis — Demo</h1>
+      <div class="small">Local demo • realistic synthetic results</div>
+    </header>
+
+    <section id="capture" class="card">
+      <h2>Capture</h2>
+      <div class="small">Use your webcam or upload a photo. Results are simulated but realistic.</div>
+      <div style="display:flex; gap:20px; margin-top:12px; align-items:flex-start;">
+        <div style="flex:1;">
+          <video id="video" autoplay playsinline style="display:none; width:100%; border-radius:10px; background:#000;"></video>
+          <img id="preview" src="" alt="preview" style="width:100%; border-radius:10px; display:none;"/>
+          <div style="margin-top:12px;">
+            <button class="btn" onclick="startCamera()">Start Camera</button>
+            <button class="btn" onclick="capturePhoto()" style="margin-left:8px;">Capture</button>
+            <button class="btn" onclick="stopCamera()" style="margin-left:8px;background:#6b7280;">Stop</button>
+          </div>
+          <div style="margin-top:12px;">
+            <input type="file" accept="image/*" onchange="handleFile(event)" />
+          </div>
+        </div>
+        <div style="width:320px;">
+          <div class="card" style="padding:12px;">
+            <div style="font-weight:700; margin-bottom:8px;">Capture Guidance</div>
+            <div class="small">• Face centered, neutral expression<br>• Even light (no strong backlight)<br>• Remove glasses</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="analyze" class="card" style="display:none;">
+      <h2>Analysis</h2>
+      <div class="small">Visual analysis (simulated): wrinkles, redness, dryness, pores, pigmentation, age estimate.</div>
+      <div style="display:flex; gap:18px; margin-top:12px;">
+        <div style="flex:1;">
+          <div id="analysisImage" style="width:320px;height:320px;border-radius:12px;background:#f3f7fb; display:flex;align-items:center;justify-content:center;color:#94a3b8;">No image</div>
+        </div>
+        <div style="flex:1.2;">
+          <div id="metrics">
+            <div class="metric"><div>Wrinkles</div><div id="wrinklesVal">—</div></div>
+            <div class="metric"><div>Redness</div><div id="rednessVal">—</div></div>
+            <div class="metric"><div>Dryness</div><div id="drynessVal">—</div></div>
+            <div class="metric"><div>Pores</div><div id="poresVal">—</div></div>
+            <div class="metric"><div>Pigmentation</div><div id="pigVal">—</div></div>
+            <div class="metric"><div>Estimated Skin Age</div><div id="ageVal">—</div></div>
+          </div>
+          <div style="margin-top:12px;">
+            <button class="btn" onclick="enrollFromAnalysis()">Enroll this participant</button>
+            <button class="btn" onclick="exportMetrics()" style="margin-left:8px;background:#0b6ed9;">Export JSON</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="enroll" class="card" style="display:none;">
+      <h2>Enroll</h2>
+      <div class="small">Participant consent is recorded locally in your browser storage (demo).</div>
+      <form id="enrollForm" onsubmit="handleEnroll(event)">
+        <div style="display:grid;gap:10px;max-width:560px;margin-top:12px;">
+          <input id="firstName" type="text" placeholder="First name" required />
+          <input id="lastName" type="text" placeholder="Last name" required />
+          <input id="email" type="email" placeholder="Email" required />
+          <label><input id="consentChk" type="checkbox" required/> I consent to image capture and analysis for this study.</label>
+          <button class="btn" type="submit">Submit Enrollment</button>
+        </div>
+      </form>
+      <div id="enrollMsg" class="small" style="margin-top:10px;"></div>
+    </section>
+
+    <section id="admin" class="card" style="display:none;">
+      <h2>Admin Dashboard</h2>
+      <div class="small">Local demo dashboard — data kept in browser storage for this demo.</div>
+      <div style="margin-top:12px;">
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Consented</th><th>Joined</th></tr></thead>
+          <tbody id="adminRows"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;">
+        <button class="btn" onclick="downloadCSV()">Download CSV</button>
+        <button class="btn" style="background:#ef4444; margin-left:8px;" onclick="clearData()">Clear Data</button>
+      </div>
+    </section>
+  </main>
+
+  <aside id="assistant">
+    <h3>HAI Assistant</h3>
+    <div id="chat" aria-live="polite"></div>
+    <div id="input">
+      <input id="msg" placeholder="Ask the assistant (e.g., 'How do I capture a good photo?')" />
+      <button onclick="sendMsg()">Send</button>
+    </div>
+  </aside>
+
+  <script>
+    // Sections
+    function showSection(id){ document.querySelectorAll('main section').forEach(s=>s.style.display='none'); document.getElementById(id).style.display='block'; }
+    showSection('capture');
+
+    // Camera handling
+    let stream;
+    const video = document.getElementById('video');
+    function startCamera(){
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }).then(s=>{ stream=s; video.srcObject=s; video.style.display='block'; document.getElementById('preview').style.display='none'; }).catch(err=>alert('Camera access denied or not available.'));
+    }
+    function stopCamera(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; video.style.display='none'; } }
+
+    function capturePhoto(){
+      if(!video || video.style.display==='none') { alert('Start camera or upload an image first.'); return; }
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      applyImageToAnalysis(dataUrl);
+    }
+
+    function handleFile(e){
+      const file = e.target.files[0];
+      if(!file) return;
+      const url = URL.createObjectURL(file);
+      applyImageToAnalysis(url);
+    }
+
+    // Simulated realistic analysis algorithm (local)
+    function analyzeImageSeed(url){
+      // deterministic-ish pseudo-random from URL length + timestamp
+      const seed = (url.length || 123) % 97;
+      function pct(base, variance){ return Math.max(3, Math.min(92, Math.round(base + ((seed*13)%variance) - variance/2))); }
+      return {
+        wrinkles: pct(32, 18),
+        redness: pct(16, 14),
+        dryness: pct(28, 16),
+        pores: pct(22, 18),
+        pigmentation: pct(20, 16),
+        skin_age: 28 + (seed % 20)
+      };
+    }
+
+    function applyImageToAnalysis(src){
+      // show preview
+      document.getElementById('analysisImage').innerHTML = '<img src="'+src+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" />';
+      // compute metrics
+      const metrics = analyzeImageSeed(src);
+      document.getElementById('wrinklesVal').innerText = metrics.wrinkles + '%';
+      document.getElementById('rednessVal').innerText = metrics.redness + '%';
+      document.getElementById('drynessVal').innerText = metrics.dryness + '%';
+      document.getElementById('poresVal').innerText = metrics.pores + '%';
+      document.getElementById('pigVal').innerText = metrics.pigmentation + '%';
+      document.getElementById('ageVal').innerText = metrics.skin_age + ' yrs';
+      // save last analysis in local state
+      localStorage.setItem('hai_last_analysis', JSON.stringify({image:src,metrics:metrics,ts:new Date().toISOString()}));
+      showSection('analyze');
+    }
+
+    // Enrollment
+    function handleEnroll(e){
+      e.preventDefault();
+      const first = document.getElementById('firstName').value.trim();
+      const last = document.getElementById('lastName').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const consent = document.getElementById('consentChk').checked;
+      if(!consent) { alert('Consent is required'); return; }
+      const list = JSON.parse(localStorage.getItem('hai_participants')||'[]');
+      list.push({name:first+' '+last,email:email,consented:consent,joined:new Date().toISOString(),analysis: JSON.parse(localStorage.getItem('hai_last_analysis')||'null')});
+      localStorage.setItem('hai_participants', JSON.stringify(list));
+      document.getElementById('enrollMsg').innerText = 'Enrollment recorded — thank you!';
+      updateAdminTable();
+    }
+
+    function enrollFromAnalysis(){
+      // prefill form with last analysis and open enroll
+      showSection('enroll');
+      const last = JSON.parse(localStorage.getItem('hai_last_analysis')||'null');
+      document.getElementById('firstName').value = '';
+      document.getElementById('lastName').value = '';
+      document.getElementById('email').value = '';
+      document.getElementById('consentChk').checked = false;
+      if(last) document.getElementById('enrollMsg').innerText = 'Last analysis ready to attach to enrollment.';
+    }
+
+    // Admin table
+    function updateAdminTable(){
+      const rows = JSON.parse(localStorage.getItem('hai_participants')||'[]');
+      const tbody = document.getElementById('adminRows');
+      tbody.innerHTML = rows.map(r=>`<tr><td>${r.name}</td><td>${r.email}</td><td>${r.consented}</td><td>${new Date(r.joined).toLocaleString()}</td></tr>`).join('') || '<tr><td colspan="4">No participants yet</td></tr>';
+    }
+    updateAdminTable();
+
+    function downloadCSV(){
+      const rows = JSON.parse(localStorage.getItem('hai_participants')||'[]');
+      if(rows.length===0){ alert('No data'); return; }
+      const csv = ['Name,Email,Consented,Joined,Wrinkles,Redness,Dryness,Pores,Age'];
+      rows.forEach(r=>{
+        const m = r.analysis ? r.analysis.metrics : {};
+        csv.push([r.name,r.email,r.consented,r.joined,m.wrinkles||'',m.redness||'',m.dryness||'',m.pores||'',m.skin_age||''].join(','));
+      });
+      const blob = new Blob([csv.join('\n')], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'participants.csv'; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function clearData(){ if(confirm('Clear participants and analyses from local demo?')){ localStorage.removeItem('hai_participants'); localStorage.removeItem('hai_last_analysis'); updateAdminTable(); alert('Cleared'); } }
+
+    function exportMetrics(){
+      const last = JSON.parse(localStorage.getItem('hai_last_analysis')||'null');
+      if(!last) { alert('No analysis to export'); return; }
+      const blob = new Blob([JSON.stringify(last,null,2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'analysis.json'; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Chat assistant (mocked ChatGPT-like)
+    function sendMsg(){
+      const input = document.getElementById('msg');
+      const text = input.value.trim();
+      if(!text) return;
+      appendChat(text,true);
+      input.value='';
+      setTimeout(()=>{
+        const reply = synthReply(text);
+        appendChat(reply,false);
+      }, 500 + Math.random()*700);
+    }
+    function appendChat(text,isUser){
+      const chat = document.getElementById('chat');
+      const p = document.createElement('p');
+      p.textContent = text;
+      if(isUser) p.className='user';
+      chat.appendChild(p);
+      chat.scrollTop = chat.scrollHeight;
+    }
+    function synthReply(text){
+      const t = text.toLowerCase();
+      if(t.includes('capture')) return 'Open Capture and click Start Camera or Upload. Center your face and use soft lighting.';
+      if(t.includes('consent')||t.includes('enroll')) return 'Go to Enroll, fill name/email, check the consent box and submit. Consent is stored locally in this demo.';
+      if(t.includes('analysis')||t.includes('wrinkles')) return 'Analysis shows percent scores. Use Export JSON to download results.';
+      if(t.includes('admin')) return 'Admin shows enrolled participants; use Download CSV to export data.';
+      return 'I can help you capture images, explain metrics, or guide enrollment. Try: "How do I capture a good photo?"';
+    }
+
+    // Accessibility: allow Enter to send in chat
+    document.getElementById('msg').addEventListener('keypress', function(e){ if(e.key==='Enter'){ sendMsg(); e.preventDefault(); } });
+  </script>
+</body>
+</html>
